@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import com.tpKafka_grupo10.model.OrdenCompra;
 import com.tpKafka_grupo10.service.OrdenCompraService;
 
+import jakarta.persistence.EntityNotFoundException;
+
 @RestController
 @RequestMapping("/ordenes-compra")
 public class OrdenCompraController {
@@ -33,5 +35,29 @@ public class OrdenCompraController {
         }
     }
 
-    // Agrega métodos para modificar y eliminar órdenes de compra según sea necesario
+    @PutMapping("/{id}")
+    public ResponseEntity<OrdenCompra> modificarOrdenCompra(
+            @PathVariable Long id, 
+            @RequestBody OrdenCompra nuevaOrdenCompra) {
+        try {
+            OrdenCompra ordenModificada = ordenCompraService.modificarOrdenCompra(id, nuevaOrdenCompra);
+            return ResponseEntity.ok(ordenModificada);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null); // 404 si no se encuentra la orden
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null); // 400 en caso de error de validación u otros
+        }
+    }
+    
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarOrdenCompra(@PathVariable Long id) {
+        try {
+            ordenCompraService.eliminarOrdenCompra(id);
+            return ResponseEntity.noContent().build(); // 204 No Content cuando la eliminación es exitosa
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404 si no se encuentra la orden
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); // 400 para otros errores
+        }
+    }
 }

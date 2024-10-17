@@ -77,7 +77,7 @@ public class Proveedor {
     // Generar una orden de despacho si se puede cumplir con toda la orden
     private void generarOrdenDespacho(OrdenCompra ordenCompra) {
         // Generar ID de la orden de despacho
-        String idOrdenDespacho = "DESP_" + ordenCompra.getId();
+        String idOrdenDespacho = "DESP_" + ordenCompra.getCodigo();
         
         // Simulación de restar del stock del proveedor
         for (ItemOrdenDeCompra item : ordenCompra.getItemsOrdenCompra()) {
@@ -86,7 +86,7 @@ public class Proveedor {
         
         // Enviar al topic de despacho
         String mensajeDespacho = "Orden de despacho ID: " + idOrdenDespacho 
-                                + ", Orden de compra ID: " + ordenCompra.getId() 
+                                + ", Orden de compra ID: " + ordenCompra.getCodigo() 
                                 + ", Fecha estimada de envío: " + LocalDate.now().plusDays(3);
         
         enviarNotificacion(ordenCompra, mensajeDespacho, "despacho");
@@ -101,10 +101,10 @@ public class Proveedor {
         }
     }
 
-    // Simulación de envío de mensajes a Kafka
+    
     private void enviarNotificacion(OrdenCompra ordenCompra, String mensaje, String topic) {
         // Aquí envías el mensaje a Kafka
-        String topicName = "/" + ordenCompra.getTiendaId() + "/" + topic;
+        String topicName = ordenCompra.getTiendaId() + "-" + topic;
         System.out.println("Enviando mensaje a Kafka Topic: " + topicName);
         System.out.println("Mensaje: " + mensaje);
         // Lógica real para enviar el mensaje al topic de Kafka iría aquí

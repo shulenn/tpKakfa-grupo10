@@ -47,7 +47,7 @@ public class ProveedorService {
 			ordenCompra.setEstado(EstadoOrden.RECHAZADA);
 			String observacion = String.join(", ", errores);
 			// Enviar mensaje al topic de solicitudes
-			kafkaTemplate.send(codigoTienda + "/solicitudes", observacion);
+			kafkaTemplate.send(codigoTienda + "-solicitudes", observacion);
 			return; // Salir del método
 		}
 
@@ -66,23 +66,23 @@ public class ProveedorService {
 			String observacion = "Artículos faltantes: "
 					+ faltantes.stream().map(item -> String.valueOf(item.getProducto().getCodigo())).collect(Collectors.joining(", "));
 			// Enviar mensaje al topic de solicitudes
-			kafkaTemplate.send(codigoTienda + "/solicitudes", observacion);
+			kafkaTemplate.send(codigoTienda + "-solicitudes", observacion);
 			return; // Salir del método
 		}
 
 		// Si se puede cumplir con todo el pedido
 		ordenCompra.setEstado(EstadoOrden.ACEPTADA);
 		// Enviar mensaje al topic de solicitudes
-		kafkaTemplate.send(codigoTienda + "/solicitudes", "Orden aceptada");
+		kafkaTemplate.send(codigoTienda + "-solicitudes", "Orden aceptada");
 
 		// Generar orden de despacho
 		OrdenDespacho ordenDespacho = new OrdenDespacho();
 		ordenDespacho.setId(UUID.randomUUID().getLeastSignificantBits()); // Generar ID único
-		ordenDespacho.setIdOrdenCompra(ordenCompra.getId());
+		ordenDespacho.setIdOrdenCompra(ordenCompra.getCodigo());
 		ordenDespacho.setFechaEstimadaEnvio(LocalDate.now().plusDays(2)); // Por ejemplo, 2 días de estimación
 
 		// Enviar orden de despacho al topic
-		kafkaTemplate.send(codigoTienda + "/despacho", ordenDespacho.toString());
+		kafkaTemplate.send(codigoTienda + "-despacho", ordenDespacho.toString());
 
 		// Restar stock del proveedor
 		for (ItemOrdenDeCompra item : ordenCompra.getItemsOrdenCompra()) {

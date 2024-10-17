@@ -16,7 +16,7 @@ public class OrdenCompra {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) // Generación automática de IDs
     @Column(name = "codigo")
-    private Long id;
+    private Long codigo;
 
     @Column(name = "tienda_id")
     private Long tiendaId;
@@ -57,16 +57,16 @@ public class OrdenCompra {
 
     // Getters y Setters
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public Long getTiendaId() {
 		return tiendaId;
+	}
+
+	public Long getCodigo() {
+		return codigo;
+	}
+
+	public void setCodigo(Long codigo) {
+		this.codigo = codigo;
 	}
 
 	public void setTiendaId(Long tiendaId) {
