@@ -14,7 +14,7 @@ public class ItemDespacho {
     @JoinColumn(name = "producto_id", nullable = false)
     private Producto producto; // Relación directa con el producto
 
-    @Column(nullable = false)
+    @Column(name = "cantidad")
     private int cantidad; // Cantidad del producto en el despacho
 
     @ManyToOne(fetch = FetchType.LAZY)

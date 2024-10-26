@@ -25,11 +25,22 @@ public class KafkaProducerConfig {
 	    configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, org.apache.kafka.common.serialization.StringSerializer.class);
 	    return new DefaultKafkaProducerFactory<>(configProps);
 	}
-
+	
 	@Bean
-	public KafkaTemplate<String, String> kafkaTemplate() {
-	    return new KafkaTemplate<>(producerFactory());
-	}
+    public KafkaTemplate<String, String> kafkaTemplate() {
+        return new KafkaTemplate<>(producerFactory());
+    }
+/*
+	@Bean
+    public ProducerFactory<String, String> producerFactory() {
+        Map<String, Object> configProps = new HashMap<>();
+        configProps.put("bootstrap.servers", "localhost:9092");
+        configProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        configProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        return new DefaultKafkaProducerFactory<>(configProps);
+    }
+*/
+
 
 
 }

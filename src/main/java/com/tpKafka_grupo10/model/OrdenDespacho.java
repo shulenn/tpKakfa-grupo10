@@ -12,12 +12,11 @@ public class OrdenDespacho {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "id_orden_compra")
     private Long idOrdenCompra;
 
+    @Column(name = "fecha_estimada_envio")
     private LocalDate fechaEstimadaEnvio;
-
-    @Enumerated(EnumType.STRING)
-    private EstadoDespacho estado;
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinColumn(name = "orden_despacho_id")
@@ -26,10 +25,9 @@ public class OrdenDespacho {
     public OrdenDespacho() {
     }
 
-    public OrdenDespacho(Long idOrdenCompra, LocalDate fechaEstimadaEnvio, EstadoDespacho estado) {
+    public OrdenDespacho(Long idOrdenCompra, LocalDate fechaEstimadaEnvio) {
         this.idOrdenCompra = idOrdenCompra;
         this.fechaEstimadaEnvio = fechaEstimadaEnvio;
-        this.estado = estado;
     }
 
     public Long getId() {
@@ -56,14 +54,6 @@ public class OrdenDespacho {
         this.fechaEstimadaEnvio = fechaEstimadaEnvio;
     }
 
-    public EstadoDespacho getEstado() {
-        return estado;
-    }
-
-    public void setEstado(EstadoDespacho estado) {
-        this.estado = estado;
-    }
-
     public List<ItemDespacho> getProductos() {
         return productos;
     }
@@ -81,9 +71,15 @@ public class OrdenDespacho {
     public void eliminarProducto(ItemDespacho item) {
         productos.remove(item);
     }
-
-    // Método para validar el estado de la orden
-    public boolean esCompletada() {
-        return estado == EstadoDespacho.ENTREGADO;
+    
+    @Override
+    public String toString() {
+        return "OrdenDespacho{" +
+               "id=" + id +
+               ", idOrdenCompra=" + idOrdenCompra +
+               ", fechaEstimadaEnvio=" + fechaEstimadaEnvio +
+               '}';
     }
+
 }
+

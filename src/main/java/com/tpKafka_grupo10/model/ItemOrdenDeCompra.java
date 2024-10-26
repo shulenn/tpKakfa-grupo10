@@ -10,21 +10,21 @@ public class ItemOrdenDeCompra {
 	@Column(name = "codigo")
 	private Long codigo;
 
-	@Column(name = "color", length = 45, nullable = false)
+	@Column(name = "color", length = 45)
 	private String color;
 
-	@Column(name = "talle", length = 45, nullable = false)
+	@Column(name = "talle", length = 45)
 	private String talle;
 
-	@Column(name = "cantidad", nullable = false)
+	@Column(name = "cantidad")
 	private int cantidad;
 
 	@ManyToOne
-	@JoinColumn(name = "producto_codigo", referencedColumnName = "codigo", nullable = false)
+	@JoinColumn(name = "producto_codigo", referencedColumnName = "codigo")
 	private Producto producto;
 
 	@ManyToOne
-	@JoinColumn(name = "orden_compra_codigo", nullable = false)
+	@JoinColumn(name = "orden_compra_codigo")
 	private OrdenCompra ordenCompra;
 	
 

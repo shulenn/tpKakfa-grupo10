@@ -6,19 +6,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import com.tpKafka_grupo10.event.StockUpdateEvent;
+
 @Service
 public class ProducerService {
 	private static final Logger logger = LoggerFactory.getLogger(ProducerService.class);
-    private final KafkaTemplate<String, String> kafkaTemplate;
+
+    private final KafkaTemplate<String, StockUpdateEvent> kafkaTemplate;
 
     @Autowired
-    public ProducerService(KafkaTemplate<String, String> kafkaTemplate) {
+    public ProducerService(KafkaTemplate<String, StockUpdateEvent> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    public void sendMessage(String topic, String message) {
-        logger.info("Producing message: {}", message);
-        kafkaTemplate.send(topic, message);
+    // Método para enviar mensajes al Kafka
+    public void enviarEvento(StockUpdateEvent event) {
+        kafkaTemplate.send("stock-actualizado", event);
     }
 
 }

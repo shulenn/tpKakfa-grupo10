@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import com.tpKafka_grupo10.event.StockUpdateEvent;
+import com.tpKafka_grupo10.kafka.producer.ProducerService;
 import com.tpKafka_grupo10.model.EstadoOrden;
 import com.tpKafka_grupo10.model.ItemOrdenDeCompra;
 import com.tpKafka_grupo10.model.OrdenCompra;
@@ -23,12 +25,18 @@ import jakarta.transaction.Transactional;
 public class OrdenCompraService {
 	@Autowired
 	private OrdenCompraRepository ordenCompraRepository;
+	
+	@Autowired ProducerService producerService;
 
-	@Autowired
-	private KafkaTemplate<String, String> kafkaTemplate;
+	private final KafkaTemplate<String, String> kafkaTemplate;
 	
 	@PersistenceContext
 	private EntityManager entityManager;
+	
+	@Autowired
+    public OrdenCompraService(KafkaTemplate<String, String> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
 	@Transactional
 	public OrdenCompra crearOrdenCompra(OrdenCompra ordenCompra) {
@@ -47,9 +55,10 @@ public class OrdenCompraService {
 	    OrdenCompra ordenGuardada = ordenCompraRepository.save(ordenCompra);
 
 	    try {
-	        // Enviar mensaje al topic de Kafka
-	        String mensaje = generarMensajeKafka(ordenGuardada);
-	        kafkaTemplate.send("orden-de-compra", mensaje);
+	        // Crear y enviar el evento StockUpdateEvent
+	    	//ESTA MAL: EL METODO CREAR NO PUEDE PEDIR POR PARAMETRO NADA MAS QUE LA ORDEN DE COMPRA
+	        StockUpdateEvent stockUpdateEvent = new StockUpdateEvent(ordenGuardada.getCodigo(),ordenGuardada); // Usa el parámetro cantidad
+	        producerService.enviarEvento(stockUpdateEvent); // Asegúrate de que el método en ProducerService está siendo llamado
 
 	        return ordenGuardada;
 	    } catch (Exception e) {
@@ -58,6 +67,7 @@ public class OrdenCompraService {
 	        throw new RuntimeException("Error al crear la orden de compra", e);
 	    }
 	}
+
 
 
 	private void validarOrdenCompra(OrdenCompra ordenCompra) {

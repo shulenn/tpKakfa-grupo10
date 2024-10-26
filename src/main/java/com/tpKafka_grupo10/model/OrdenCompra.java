@@ -39,12 +39,15 @@ public class OrdenCompra {
     @OneToMany(mappedBy = "ordenCompra", cascade = CascadeType.ALL) // Relación uno a muchos con Productos
     private List<ItemOrdenDeCompra> itemsOrdenCompra;
     
+    @Column(name = "pausada")
+    private boolean pausada;;
+    
     public OrdenCompra() {
     	this.itemsOrdenCompra = new ArrayList<>();
         // Constructor por defecto
     }
 
-    public OrdenCompra(Long tiendaId, String observaciones, String ordenDespacho, LocalDate fechaSolicitud, LocalDate fechaRecepcion, List<ItemOrdenDeCompra> itemsOrdenCompra) {
+    public OrdenCompra(Long tiendaId, String observaciones, String ordenDespacho, LocalDate fechaSolicitud, LocalDate fechaRecepcion, List<ItemOrdenDeCompra> itemsOrdenCompra, boolean pausada) {
         this.tiendaId = tiendaId;
         this.estado = EstadoOrden.SOLICITADA;
         this.observaciones = observaciones;
@@ -52,6 +55,7 @@ public class OrdenCompra {
         this.fechaSolicitud = fechaSolicitud;
         this.fechaRecepcion = fechaRecepcion;
         this.itemsOrdenCompra = (itemsOrdenCompra != null) ? itemsOrdenCompra : new ArrayList<>();
+        this.pausada = false;
     }
 
 
@@ -121,6 +125,15 @@ public class OrdenCompra {
 		this.itemsOrdenCompra = itemsOrdenCompra;
 	}
 
+	public boolean isPausada() {
+		return pausada;
+	}
+
+	public void setPausada(boolean pausada) {
+		this.pausada = pausada;
+	}
+	
+	
     
 }
 
