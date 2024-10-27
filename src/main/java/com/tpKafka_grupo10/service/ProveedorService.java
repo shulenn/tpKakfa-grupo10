@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.tpKafka_grupo10.event.StockUpdateEvent;
+import com.tpKafka_grupo10.interfaces.ProveedorServiceInterface;
 import com.tpKafka_grupo10.model.EstadoOrden;
 import com.tpKafka_grupo10.model.ItemDespacho;
 import com.tpKafka_grupo10.model.ItemOrdenDeCompra;
@@ -26,189 +27,196 @@ import com.tpKafka_grupo10.repository.StockRepository;
 
 @Transactional
 @Service
-public class ProveedorService {
+public class ProveedorService implements ProveedorServiceInterface {
 
-    @Autowired
-    private KafkaTemplate<String, String> kafkaTemplate;
+	private final KafkaTemplate<String, String> kafkaTemplateString;
+	private final KafkaTemplate<String, StockUpdateEvent> kafkaTemplateEvent;
 
-    @Autowired
-    private StockService stockService; // Un servicio para manejar stock
-    
-    @Autowired
-    private OrdenDespachoRepository ordenDespachoRepository;
+	@Autowired
+	public ProveedorService(KafkaTemplate<String, String> kafkaTemplateString,
+			KafkaTemplate<String, StockUpdateEvent> kafkaTemplateEvent) {
+		this.kafkaTemplateString = kafkaTemplateString;
+		this.kafkaTemplateEvent = kafkaTemplateEvent;
+	}
 
-    @Autowired
-    private ItemDespachoRepository itemDespachoRepository;
-    
-    @Autowired
-    private OrdenCompraRepository ordenCompraRepository;
-    
-    @Autowired
-    private StockRepository stockRepository;
+	@Autowired
+	private StockService stockService; // Un servicio para manejar stock
 
-    public void procesarOrdenCompra(OrdenCompra ordenCompra) {
-        String codigoTienda = ordenCompra.getTiendaId().toString();
-        
-        // Validar artículos y obtener errores
-        List<String> errores = validarItemsOrdenDeCompra(ordenCompra);
+	@Autowired
+	private OrdenDespachoRepository ordenDespachoRepository;
 
-        // Si hay errores, rechazar la orden y enviar el mensaje de error
-        if (!errores.isEmpty()) {
-            rechazarOrdenConErrores(ordenCompra, errores, codigoTienda);
-            return; // Salir del método
-        }
+	@Autowired
+	private ItemDespachoRepository itemDespachoRepository;
 
-        // Verificar si hay stock suficiente para cada artículo
-        List<ItemOrdenDeCompra> faltantes = verificarStock(ordenCompra);
+	@Autowired
+	private OrdenCompraRepository ordenCompraRepository;
 
-        // Si faltan artículos, aceptar la orden parcialmente y enviar notificación
-        if (!faltantes.isEmpty()) {
-            aceptarOrdenConFaltantes(ordenCompra, faltantes, codigoTienda);
-            return; // Salir del método
-        }
+	@Autowired
+	private StockRepository stockRepository;
 
-        // Aceptar completamente la orden, generar despacho y restar stock
-        aceptarYGenerarDespacho(ordenCompra, codigoTienda);
-    }
+	public void procesarOrdenCompra(OrdenCompra ordenCompra) {
+		String codigoTienda = ordenCompra.getTiendaId().toString();
 
-    // Método para validar los artículos de la orden
-    private List<String> validarItemsOrdenDeCompra(OrdenCompra ordenCompra) {
-        List<String> errores = new ArrayList<>();
+		// Validar artículos y obtener errores
+		List<String> errores = validarItemsOrdenDeCompra(ordenCompra);
 
-        for (ItemOrdenDeCompra item : ordenCompra.getItemsOrdenCompra()) {
-            if (!stockService.proveedorProveeProducto(item.getProducto().getCodigo())) {
-                errores.add("Artículo " + item.getProducto().getCodigo() + ": no existe");
-            }
-            if (item.getCantidad() < 1) {
-                errores.add("Artículo " + item.getProducto().getCodigo() + ": cantidad mal informada");
-            }
-        }
-        return errores;
-    }
+		// Si hay errores, rechazar la orden y enviar el mensaje de error
+		if (!errores.isEmpty()) {
+			rechazarOrdenConErrores(ordenCompra, errores, codigoTienda);
+			return; // Salir del método
+		}
 
-    // Método para rechazar una orden y enviar errores a Kafka
-    private void rechazarOrdenConErrores(OrdenCompra ordenCompra, List<String> errores, String codigoTienda) {
-        ordenCompra.setEstado(EstadoOrden.RECHAZADA);
-        ordenCompraRepository.save(ordenCompra); // Asegúrate de guardar los cambios
-        String observacion = String.join(", ", errores);
-        kafkaTemplate.send(codigoTienda + "-solicitudes", observacion);
-    }
+		// Verificar si hay stock suficiente para cada artículo
+		List<ItemOrdenDeCompra> faltantes = verificarStock(ordenCompra);
 
-    // Método para verificar si hay stock suficiente
-    private List<ItemOrdenDeCompra> verificarStock(OrdenCompra ordenCompra) {
-        List<ItemOrdenDeCompra> faltantes = new ArrayList<>();
+		// Si faltan artículos, aceptar la orden parcialmente y enviar notificación
+		if (!faltantes.isEmpty()) {
+			aceptarOrdenConFaltantes(ordenCompra, faltantes, codigoTienda);
+			return; // Salir del método
+		}
 
-        for (ItemOrdenDeCompra item : ordenCompra.getItemsOrdenCompra()) {
-            if (!stockService.tieneStockSuficiente(item.getProducto().getCodigo(), item.getCantidad())) {
-                faltantes.add(item);
-            }
-        }
-        return faltantes;
-    }
+		// Aceptar completamente la orden, generar despacho y restar stock
+		aceptarYGenerarDespacho(ordenCompra, codigoTienda);
+	}
 
-    // Método para aceptar una orden con faltantes y enviar notificación
-    @Transactional
-    private void aceptarOrdenConFaltantes(Long ordenCompraId, List<ItemOrdenDeCompra> faltantes, String codigoTienda) {
-        // Recuperar la instancia completa de la orden de compra
-        OrdenCompra ordenCompra = ordenCompraRepository.findById(ordenCompraId)
-                .orElseThrow(() -> new IllegalArgumentException("Orden de compra no encontrada"));
+	// Método para validar los artículos de la orden
+	private List<String> validarItemsOrdenDeCompra(OrdenCompra ordenCompra) {
+		List<String> errores = new ArrayList<>();
 
-        // Actualizar solo los campos necesarios
-        ordenCompra.setEstado(EstadoOrden.SOLICITADA);
-        ordenCompra.setPausada(true);
+		for (ItemOrdenDeCompra item : ordenCompra.getItemsOrdenCompra()) {
+			if (!stockService.proveedorProveeProducto(item.getProducto().getCodigo())) {
+				errores.add("Artículo " + item.getProducto().getCodigo() + ": no existe");
+			}
+			if (item.getCantidad() < 1) {
+				errores.add("Artículo " + item.getProducto().getCodigo() + ": cantidad mal informada");
+			}
+		}
+		return errores;
+	}
 
-        // Guardar solo los cambios en los campos seleccionados
-        ordenCompraRepository.save(ordenCompra);
+	// Método para rechazar una orden y enviar errores a Kafka
+	private void rechazarOrdenConErrores(OrdenCompra ordenCompra, List<String> errores, String codigoTienda) {
+		ordenCompra.setEstado(EstadoOrden.RECHAZADA);
+		ordenCompraRepository.save(ordenCompra); // Asegúrate de guardar los cambios
+		String observacion = String.join(", ", errores);
+		kafkaTemplateString.send(codigoTienda + "-solicitudes", observacion);
+	}
 
-        // Preparar el mensaje de observación
-        String observacion = "Código de Artículos faltantes: " + faltantes.stream()    
-                .map(item -> String.valueOf(item.getProducto().getCodigo()))
-                .collect(Collectors.joining(", "));
+	// Método para verificar si hay stock suficiente
+	private List<ItemOrdenDeCompra> verificarStock(OrdenCompra ordenCompra) {
+		List<ItemOrdenDeCompra> faltantes = new ArrayList<>();
 
-        // Enviar el mensaje a Kafka
-        kafkaTemplate.send(codigoTienda + "-solicitudes", observacion);
-    }
-    
-    
-    @Transactional
-    private void aceptarOrdenConFaltantes(OrdenCompra ordenCompra, List<ItemOrdenDeCompra> faltantes, String codigoTienda) {
-        // Actualizar solo el estado y pausada, sin tocar otros campos
-        ordenCompraRepository.actualizarEstadoYPausada(ordenCompra.getCodigo(), EstadoOrden.ACEPTADA, true);
+		for (ItemOrdenDeCompra item : ordenCompra.getItemsOrdenCompra()) {
+			if (!stockService.tieneStockSuficiente(item.getProducto().getCodigo(), item.getCantidad())) {
+				faltantes.add(item);
+			}
+		}
+		return faltantes;
+	}
 
-        // Preparar el mensaje de observación
-        String observacion = "Código de Artículos faltantes: " + faltantes.stream()
-                .map(item -> String.valueOf(item.getProducto().getCodigo()))
-                .collect(Collectors.joining(", "));
+	// Método para aceptar una orden con faltantes y enviar notificación
+	@Transactional
+	private void aceptarOrdenConFaltantes(Long ordenCompraId, List<ItemOrdenDeCompra> faltantes, String codigoTienda) {
+		// Recuperar la instancia completa de la orden de compra
+		OrdenCompra ordenCompra = ordenCompraRepository.findById(ordenCompraId)
+				.orElseThrow(() -> new IllegalArgumentException("Orden de compra no encontrada"));
 
-        // Enviar el mensaje a Kafka
-        kafkaTemplate.send(codigoTienda + "-solicitudes", observacion);
-    }
+		// Actualizar solo los campos necesarios
+		ordenCompra.setEstado(EstadoOrden.SOLICITADA);
+		ordenCompra.setPausada(true);
 
+		// Guardar solo los cambios en los campos seleccionados
+		ordenCompraRepository.save(ordenCompra);
 
-    // Método para aceptar completamente la orden, generar despacho y restar stock
-    private void aceptarYGenerarDespacho(OrdenCompra ordenCompra, String codigoTienda) {
-        ordenCompra.setEstado(EstadoOrden.ACEPTADA);
-        kafkaTemplate.send(codigoTienda + "-solicitudes", "Orden aceptada");
+		// Preparar el mensaje de observación
+		String observacion = "Código de Artículos faltantes: " + faltantes.stream()
+				.map(item -> String.valueOf(item.getProducto().getCodigo())).collect(Collectors.joining(", "));
 
-        // Generar orden de despacho
-        OrdenDespacho ordenDespacho = new OrdenDespacho();
-        ordenDespacho.setIdOrdenCompra(ordenCompra.getCodigo());
-        ordenDespacho.setFechaEstimadaEnvio(LocalDate.now().plusDays(2)); // Estimación de 2 días
-        
-        // Guardar orden de despacho en la base de datos
-        ordenDespacho = ordenDespachoRepository.save(ordenDespacho);
+		// Enviar el mensaje a Kafka
+		kafkaTemplateString.send(codigoTienda + "-solicitudes", observacion);
+	}
 
-        // Crear los items de despacho basados en los items de la orden de compra
-        for (ItemOrdenDeCompra itemOrden : ordenCompra.getItemsOrdenCompra()) {
-            ItemDespacho itemDespacho = new ItemDespacho();
+	@Transactional
+	private void aceptarOrdenConFaltantes(OrdenCompra ordenCompra, List<ItemOrdenDeCompra> faltantes,
+			String codigoTienda) {
+		// Actualizar solo el estado y pausada, sin tocar otros campos
+		ordenCompraRepository.actualizarEstadoYPausada(ordenCompra.getCodigo(), EstadoOrden.ACEPTADA, true);
 
-            // Asignar el producto a ItemDespacho
-            Producto producto = itemOrden.getProducto();  // Obtener el objeto Producto
-            itemDespacho.setProducto(producto);  // Asignar el objeto Producto al ItemDespacho
-            
-            // Asignar la cantidad
-            itemDespacho.setCantidad(itemOrden.getCantidad());
-            
-            // Asignar la orden de despacho
-            itemDespacho.setOrdenDespacho(ordenDespacho);
+		// Preparar el mensaje de observación
+		String observacion = "Código de Artículos faltantes: " + faltantes.stream()
+				.map(item -> String.valueOf(item.getProducto().getCodigo())).collect(Collectors.joining(", "));
 
-            // Guardar el item de despacho en la base de datos
-            itemDespachoRepository.save(itemDespacho);
-        }
+		// Enviar el mensaje a Kafka
+		kafkaTemplateString.send(codigoTienda + "-solicitudes", observacion);
+	}
 
-        // Enviar la orden de despacho a Kafka
-        kafkaTemplate.send(codigoTienda + "-despacho", ordenDespacho.toString());
+	// Método para aceptar completamente la orden, generar despacho y restar stock
+	private void aceptarYGenerarDespacho(OrdenCompra ordenCompra, String codigoTienda) {
+		ordenCompra.setEstado(EstadoOrden.ACEPTADA);
+		kafkaTemplateString.send(codigoTienda + "-solicitudes", "Orden aceptada");
 
-        // Restar stock del proveedor
-        for (ItemOrdenDeCompra item : ordenCompra.getItemsOrdenCompra()) {
-            stockService.restarStock(item.getProducto().getCodigo(), item.getCantidad());
-        }
-    }
-    
-    @KafkaListener(topics = "stock-actualizado", groupId = "grupo-proveedor")
-    public void manejarActualizacionStock(StockUpdateEvent event) {
-        List<OrdenCompra> ordenesPausadas = ordenCompraRepository.findOrdenesPausadasPorProducto(event.getProductoId());
-        for (OrdenCompra orden : ordenesPausadas) {
-            if (puedeCumplirOrden(orden)) {
-                orden.setEstado(EstadoOrden.ACEPTADA);
-                orden.setPausada(false);
-                ordenCompraRepository.save(orden);
-            }
-        }
-    }
-    
- // Método para verificar si una orden puede ser cumplida
-    public boolean puedeCumplirOrden(OrdenCompra orden) {
-        // Implementa la lógica según tu necesidad
-        List<ItemOrdenDeCompra> items = orden.getItemsOrdenCompra(); // Asegúrate de que tienes acceso a los ítems
-        for (ItemOrdenDeCompra item : items) {
-            Stock stock = stockRepository.findByProductoCodigo(item.getProducto().getCodigo());
-            if (stock == null || stock.getCantidad() < item.getCantidad()) {
-                return false; // No se puede cumplir si no hay suficiente stock
-            }
-        }
-        return true; // Se puede cumplir la orden
-    }
-    
+		// Generar orden de despacho
+		OrdenDespacho ordenDespacho = new OrdenDespacho();
+		ordenDespacho.setIdOrdenCompra(ordenCompra.getCodigo());
+		ordenDespacho.setFechaEstimadaEnvio(LocalDate.now().plusDays(2)); // Estimación de 2 días
 
+		// Guardar orden de despacho en la base de datos
+		ordenDespacho = ordenDespachoRepository.save(ordenDespacho);
+
+		// Crear los items de despacho basados en los items de la orden de compra
+		for (ItemOrdenDeCompra itemOrden : ordenCompra.getItemsOrdenCompra()) {
+			ItemDespacho itemDespacho = new ItemDespacho();
+
+			// Asignar el producto a ItemDespacho
+			Producto producto = itemOrden.getProducto(); // Obtener el objeto Producto
+			itemDespacho.setProducto(producto); // Asignar el objeto Producto al ItemDespacho
+
+			// Asignar la cantidad
+			itemDespacho.setCantidad(itemOrden.getCantidad());
+
+			// Asignar la orden de despacho
+			itemDespacho.setOrdenDespacho(ordenDespacho);
+
+			// Guardar el item de despacho en la base de datos
+			itemDespachoRepository.save(itemDespacho);
+		}
+
+		// Enviar la orden de despacho a Kafka
+		kafkaTemplateString.send(codigoTienda + "-despacho", ordenDespacho.toString());
+
+		// Restar stock del proveedor
+		for (ItemOrdenDeCompra item : ordenCompra.getItemsOrdenCompra()) {
+			stockService.restarStock(item.getProducto().getCodigo(), item.getCantidad());
+		}
+	}
+
+	@KafkaListener(topics = "stock-actualizado", groupId = "grupo-proveedor")
+	public void manejarActualizacionStock(StockUpdateEvent event) {
+		List<OrdenCompra> ordenesPausadas = ordenCompraRepository.findOrdenesPausadasPorProducto(event.getProductoId());
+		for (OrdenCompra orden : ordenesPausadas) {
+			if (puedeCumplirOrden(orden)) {
+				orden.setEstado(EstadoOrden.ACEPTADA);
+				orden.setPausada(false);
+				ordenCompraRepository.save(orden);
+			}
+		}
+	}
+
+	// Método para verificar si una orden puede ser cumplida
+	public boolean puedeCumplirOrden(OrdenCompra orden) {
+		// Implementa la lógica según tu necesidad
+		List<ItemOrdenDeCompra> items = orden.getItemsOrdenCompra(); // Asegúrate de que tienes acceso a los ítems
+		for (ItemOrdenDeCompra item : items) {
+			Stock stock = stockRepository.findByProductoCodigo(item.getProducto().getCodigo());
+			if (stock == null || stock.getCantidad() < item.getCantidad()) {
+				return false; // No se puede cumplir si no hay suficiente stock
+			}
+		}
+		return true; // Se puede cumplir la orden
+	}
+
+	@Override
+	public boolean proveedorProveeProducto(Long productoId) {
+		return stockRepository.findByProductoCodigo(productoId) != null;
+	}
 }

@@ -1,8 +1,6 @@
 package com.tpKafka_grupo10.service;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +12,6 @@ import com.tpKafka_grupo10.event.StockUpdateEvent;
 import com.tpKafka_grupo10.model.EstadoOrden;
 import com.tpKafka_grupo10.model.ItemOrdenDeCompra;
 import com.tpKafka_grupo10.model.OrdenCompra;
-import com.tpKafka_grupo10.model.Producto;
 import com.tpKafka_grupo10.model.Stock;
 import com.tpKafka_grupo10.repository.OrdenCompraRepository;
 import com.tpKafka_grupo10.repository.StockRepository;
@@ -24,9 +21,9 @@ import jakarta.transaction.Transactional;
 @Service
 public class StockService {
 
-	private static final Logger logger = LoggerFactory.getLogger(StockService.class);
-	
-	@Autowired
+    private static final Logger logger = LoggerFactory.getLogger(StockService.class);
+    
+    @Autowired
     private KafkaTemplate<String, StockUpdateEvent> kafkaTemplate;
 
     @Autowired
@@ -34,9 +31,6 @@ public class StockService {
     
     @Autowired
     private OrdenCompraRepository ordenCompraRepository;
-    
-    @Autowired
-    private ProveedorService proveedorService;
 
     public boolean proveedorProveeProducto(Long productoId) {
         return stockRepository.findByProductoCodigo(productoId) != null;
@@ -76,13 +70,13 @@ public class StockService {
             stock.setCantidad(nuevaCantidad);
             stockRepository.save(stock);
 
-         // Enviar el evento de actualización de stock a Kafka
+            // Enviar el evento de actualización de stock a Kafka
             StockUpdateEvent event = new StockUpdateEvent();
             event.setProductoId(productoId);
             event.setNuevaCantidad(nuevaCantidad);
             kafkaTemplate.send("stock-actualizado", event);
             
-         // Reprocesar órdenes pausadas
+            // Reprocesar órdenes pausadas
             List<OrdenCompra> ordenesPausadas = ordenCompraRepository.findOrdenesPausadasPorProducto(productoId);
             for (OrdenCompra orden : ordenesPausadas) {
                 if (puedeCumplirOrden(orden)) {
@@ -95,9 +89,7 @@ public class StockService {
             throw new IllegalArgumentException("Producto no encontrado en el stock.");
         }
     }
-    
-    
-    
+
     private boolean puedeCumplirOrden(OrdenCompra orden) {
         // Lógica para verificar si la orden se puede cumplir con el stock actualizado
         for (ItemOrdenDeCompra item : orden.getItemsOrdenCompra()) {
@@ -108,6 +100,4 @@ public class StockService {
         }
         return true;
     }
-    
-    
 }

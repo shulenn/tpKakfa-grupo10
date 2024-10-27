@@ -1,6 +1,7 @@
 package com.tpKafka_grupo10.service;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -27,16 +28,18 @@ public class OrdenCompraService {
 	private OrdenCompraRepository ordenCompraRepository;
 	
 	@Autowired ProducerService producerService;
-
-	private final KafkaTemplate<String, String> kafkaTemplate;
 	
+	private final KafkaTemplate<String, StockUpdateEvent> kafkaTemplate;
+
 	@PersistenceContext
 	private EntityManager entityManager;
 	
+	
 	@Autowired
-    public OrdenCompraService(KafkaTemplate<String, String> kafkaTemplate) {
+    public OrdenCompraService(KafkaTemplate<String, StockUpdateEvent> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
+	
 
 	@Transactional
 	public OrdenCompra crearOrdenCompra(OrdenCompra ordenCompra) {
@@ -56,8 +59,9 @@ public class OrdenCompraService {
 
 	    try {
 	        // Crear y enviar el evento StockUpdateEvent
-	    	//ESTA MAL: EL METODO CREAR NO PUEDE PEDIR POR PARAMETRO NADA MAS QUE LA ORDEN DE COMPRA
-	        StockUpdateEvent stockUpdateEvent = new StockUpdateEvent(ordenGuardada.getCodigo(),ordenGuardada); // Usa el parámetro cantidad
+	        // Aquí puedes definir la lógica para determinar la cantidad total a enviar
+	        int cantidadTotal = calcularCantidadTotal(ordenGuardada.getItemsOrdenCompra());
+	        StockUpdateEvent stockUpdateEvent = new StockUpdateEvent(ordenGuardada.getCodigo(), cantidadTotal); // Usa la cantidad total calculada
 	        producerService.enviarEvento(stockUpdateEvent); // Asegúrate de que el método en ProducerService está siendo llamado
 
 	        return ordenGuardada;
@@ -66,6 +70,15 @@ public class OrdenCompraService {
 	        logger.error("Error al crear la orden de compra", e);
 	        throw new RuntimeException("Error al crear la orden de compra", e);
 	    }
+	}
+
+	// Método para calcular la cantidad total (puedes ajustar esto según tu lógica)
+	private int calcularCantidadTotal(List<ItemOrdenDeCompra> items) {
+	    int total = 0;
+	    for (ItemOrdenDeCompra item : items) {
+	        total += item.getCantidad(); // Asumiendo que tienes un método getCantidad en ItemOrdenDeCompra
+	    }
+	    return total;
 	}
 
 
