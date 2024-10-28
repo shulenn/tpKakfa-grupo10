@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Orden de Compra</title>
+</head>
+<body>
+    <h2>Crear Orden de Compra</h2>
+    <form id="ordenCompraForm">
+        <label for="tiendaId">ID de Tienda:</label>
+        <input type="number" id="tiendaId" name="tiendaId" required><br>
+
+        <label for="observaciones">Observaciones:</label>
+        <input type="text" id="observaciones" name="observaciones"><br>
+
+        <label for="ordenDespacho">Orden de Despacho:</label>
+        <input type="text" id="ordenDespacho" name="ordenDespacho"><br>
+
+        <label for="fechaRecepcion">Fecha de Recepción:</label>
+        <input type="date" id="fechaRecepcion" name="fechaRecepcion"><br>
+
+        <h3>Items de la Orden de Compra</h3>
+        <div id="itemsContainer">
+            <!-- Aquí se agregarán dinámicamente los items -->
+        </div>
+        <button type="button" onclick="agregarItem()">Agregar Item</button><br>
+
+        <button type="submit">Crear Orden de Compra</button>
+    </form>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="/js/ordenCompra.js"></script>
+</body>
+</html>

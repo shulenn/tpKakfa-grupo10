@@ -23,6 +23,7 @@ public class StockController {
 	@Autowired
     private StockService stockService;
 
+	
 	/*@PostMapping("/actualizar/{productoId}")
     public ResponseEntity<String> actualizarStock(@RequestBody Map<String, Object> request) {
         try {
@@ -52,4 +53,5 @@ public class StockController {
         stockService.actualizarStock(request.getProductoId(), request.getNuevaCantidad());
         return ResponseEntity.ok().build();
     }
+	
 }
