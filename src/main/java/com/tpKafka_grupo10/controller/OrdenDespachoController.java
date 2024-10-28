@@ -18,6 +18,9 @@ public class OrdenDespachoController {
 
     @PostMapping
     public ResponseEntity<OrdenDespacho> crearOrdenDespacho(@RequestBody OrdenDespacho ordenDespacho) {
+        if (ordenDespacho.getProductos() == null || ordenDespacho.getProductos().isEmpty()) {
+            return ResponseEntity.badRequest().body(null); // Manejar el error si no hay productos
+        }
         OrdenDespacho nuevaOrden = ordenDespachoService.crearOrdenDespacho(ordenDespacho);
         return ResponseEntity.ok(nuevaOrden);
     }
