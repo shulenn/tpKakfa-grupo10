@@ -116,29 +116,7 @@ public class ProveedorService implements ProveedorServiceInterface {
 
 	// Método para aceptar una orden con faltantes y enviar notificación
 	@Transactional
-	private void aceptarOrdenConFaltantes(Long ordenCompraId, List<ItemOrdenDeCompra> faltantes, String codigoTienda) {
-		// Recuperar la instancia completa de la orden de compra
-		OrdenCompra ordenCompra = ordenCompraRepository.findById(ordenCompraId)
-				.orElseThrow(() -> new IllegalArgumentException("Orden de compra no encontrada"));
-
-		// Actualizar solo los campos necesarios
-		ordenCompra.setEstado(EstadoOrden.SOLICITADA);
-		ordenCompra.setPausada(true);
-
-		// Guardar solo los cambios en los campos seleccionados
-		ordenCompraRepository.save(ordenCompra);
-
-		// Preparar el mensaje de observación
-		String observacion = "Código de Artículos faltantes: " + faltantes.stream()
-				.map(item -> String.valueOf(item.getProducto().getCodigo())).collect(Collectors.joining(", "));
-
-		// Enviar el mensaje a Kafka
-		kafkaTemplateString.send(codigoTienda + "-solicitudes", observacion);
-	}
-
-	@Transactional
-	private void aceptarOrdenConFaltantes(OrdenCompra ordenCompra, List<ItemOrdenDeCompra> faltantes,
-			String codigoTienda) {
+	private void aceptarOrdenConFaltantes(OrdenCompra ordenCompra, List<ItemOrdenDeCompra> faltantes, String codigoTienda) {
 		// Actualizar solo el estado y pausada, sin tocar otros campos
 		ordenCompraRepository.actualizarEstadoYPausada(ordenCompra.getCodigo(), EstadoOrden.ACEPTADA, true);
 
@@ -153,6 +131,7 @@ public class ProveedorService implements ProveedorServiceInterface {
 	// Método para aceptar completamente la orden, generar despacho y restar stock
 	private void aceptarYGenerarDespacho(OrdenCompra ordenCompra, String codigoTienda) {
 		ordenCompra.setEstado(EstadoOrden.ACEPTADA);
+		ordenCompraRepository.save(ordenCompra);
 		kafkaTemplateString.send(codigoTienda + "-solicitudes", "Orden aceptada");
 
 		// Generar orden de despacho
@@ -190,18 +169,6 @@ public class ProveedorService implements ProveedorServiceInterface {
 		}
 	}
 
-	@KafkaListener(topics = "stock-actualizado", groupId = "grupo-proveedor")
-	public void manejarActualizacionStock(StockUpdateEvent event) {
-		List<OrdenCompra> ordenesPausadas = ordenCompraRepository.findOrdenesPausadasPorProducto(event.getProductoId());
-		for (OrdenCompra orden : ordenesPausadas) {
-			if (puedeCumplirOrden(orden)) {
-				orden.setEstado(EstadoOrden.ACEPTADA);
-				orden.setPausada(false);
-				ordenCompraRepository.save(orden);
-			}
-		}
-	}
-
 	// Método para verificar si una orden puede ser cumplida
 	public boolean puedeCumplirOrden(OrdenCompra orden) {
 		// Implementa la lógica según tu necesidad
@@ -218,5 +185,17 @@ public class ProveedorService implements ProveedorServiceInterface {
 	@Override
 	public boolean proveedorProveeProducto(Long productoId) {
 		return stockRepository.findByProductoCodigo(productoId) != null;
+	}
+	
+	@KafkaListener(topics = "stock-actualizado", groupId = "grupo-proveedor")
+	public void manejarActualizacionStock(StockUpdateEvent event) {
+		List<OrdenCompra> ordenesPausadas = ordenCompraRepository.findOrdenesPausadasPorProducto(event.getProductoId());
+		for (OrdenCompra orden : ordenesPausadas) {
+			if (puedeCumplirOrden(orden)) {
+				orden.setEstado(EstadoOrden.ACEPTADA);
+				orden.setPausada(false);
+				ordenCompraRepository.save(orden);
+			}
+		}
 	}
 }

@@ -1,5 +1,6 @@
 package com.tpKafka_grupo10.service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -10,10 +11,15 @@ import org.springframework.stereotype.Service;
 
 import com.tpKafka_grupo10.event.StockUpdateEvent;
 import com.tpKafka_grupo10.model.EstadoOrden;
+import com.tpKafka_grupo10.model.ItemDespacho;
 import com.tpKafka_grupo10.model.ItemOrdenDeCompra;
 import com.tpKafka_grupo10.model.OrdenCompra;
+import com.tpKafka_grupo10.model.OrdenDespacho;
+import com.tpKafka_grupo10.model.Producto;
 import com.tpKafka_grupo10.model.Stock;
+import com.tpKafka_grupo10.repository.ItemDespachoRepository;
 import com.tpKafka_grupo10.repository.OrdenCompraRepository;
+import com.tpKafka_grupo10.repository.OrdenDespachoRepository;
 import com.tpKafka_grupo10.repository.StockRepository;
 
 import jakarta.transaction.Transactional;
@@ -24,13 +30,28 @@ public class StockService {
     private static final Logger logger = LoggerFactory.getLogger(StockService.class);
     
     @Autowired
-    private KafkaTemplate<String, StockUpdateEvent> kafkaTemplate;
-
-    @Autowired
     private StockRepository stockRepository;
     
     @Autowired
     private OrdenCompraRepository ordenCompraRepository;
+    
+    @Autowired
+    private OrdenDespachoRepository ordenDespachoRepository;
+    
+    @Autowired
+    private ItemDespachoRepository itemDespachoRepository;
+    
+    @Autowired
+    private KafkaTemplate<String, StockUpdateEvent> kafkaTemplateEvent;
+    @Autowired
+    private final KafkaTemplate<String, String> kafkaTemplateString;
+    
+    
+	public StockService(KafkaTemplate<String, String> kafkaTemplateString,
+			KafkaTemplate<String, StockUpdateEvent> kafkaTemplateEvent) {
+		this.kafkaTemplateString = kafkaTemplateString;
+		this.kafkaTemplateEvent = kafkaTemplateEvent;
+	}
 
     public boolean proveedorProveeProducto(Long productoId) {
         return stockRepository.findByProductoCodigo(productoId) != null;
@@ -74,21 +95,52 @@ public class StockService {
             StockUpdateEvent event = new StockUpdateEvent();
             event.setProductoId(productoId);
             event.setNuevaCantidad(nuevaCantidad);
-            kafkaTemplate.send("stock-actualizado", event);
-            
-            // Reprocesar órdenes pausadas
+            kafkaTemplateEvent.send("stock-actualizado", event);
+
+            // Reprocesar órdenes pausadas que contengan este producto
             List<OrdenCompra> ordenesPausadas = ordenCompraRepository.findOrdenesPausadasPorProducto(productoId);
             for (OrdenCompra orden : ordenesPausadas) {
                 if (puedeCumplirOrden(orden)) {
-                    orden.setEstado(EstadoOrden.ACEPTADA);
+                    // Despausar Orden
                     orden.setPausada(false);
                     ordenCompraRepository.save(orden);
+
+                    // Generar orden de despacho
+                    OrdenDespacho ordenDespacho = new OrdenDespacho();
+                    ordenDespacho.setIdOrdenCompra(orden.getCodigo());
+                    ordenDespacho.setFechaEstimadaEnvio(LocalDate.now().plusDays(2)); // Estimación de 2 días
+
+                    // Guardar orden de despacho en la base de datos
+                    ordenDespacho = ordenDespachoRepository.save(ordenDespacho);
+
+                    // Crear los items de despacho basados en los items de la orden de compra
+                    for (ItemOrdenDeCompra itemOrden : orden.getItemsOrdenCompra()) {
+                        ItemDespacho itemDespacho = new ItemDespacho();
+
+                        // Asignar el producto y la cantidad al item de despacho
+                        Producto producto = itemOrden.getProducto();
+                        itemDespacho.setProducto(producto);
+                        itemDespacho.setCantidad(itemOrden.getCantidad());
+                        itemDespacho.setOrdenDespacho(ordenDespacho);
+
+                        // Guardar el item de despacho en la base de datos
+                        itemDespachoRepository.save(itemDespacho);
+                    }
+
+                    // Enviar la orden de despacho a Kafka
+                    kafkaTemplateString.send(orden.getTiendaId() + "-despacho", ordenDespacho.toString());
+
+                    // Restar stock del proveedor para cada item
+                    for (ItemOrdenDeCompra item : orden.getItemsOrdenCompra()) {
+                        restarStock(item.getProducto().getCodigo(), item.getCantidad());
+                    }
                 }
             }
         } else {
             throw new IllegalArgumentException("Producto no encontrado en el stock.");
         }
     }
+
 
     private boolean puedeCumplirOrden(OrdenCompra orden) {
         // Lógica para verificar si la orden se puede cumplir con el stock actualizado
