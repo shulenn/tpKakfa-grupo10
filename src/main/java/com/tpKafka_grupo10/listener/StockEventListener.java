@@ -16,7 +16,7 @@ public class StockEventListener {
     @Autowired
     private OrdenCompraRepository ordenCompraRepository;
 
-    @KafkaListener(topics = "stock-actualizado", groupId = "grupo-proveedor")
+    @KafkaListener(topics = "stock-actualizado", groupId = "proveedor")
     public void manejarActualizacionStock(StockUpdateEvent event) {
         List<OrdenCompra> ordenesPausadas = ordenCompraRepository.findOrdenesPausadasPorProducto(event.getProductoId());
         for (OrdenCompra orden : ordenesPausadas) {
