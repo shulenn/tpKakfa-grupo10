@@ -2,6 +2,8 @@ package com.tpKafka_grupo10.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.ui.Model;
 
 @Controller
 public class WebController {
@@ -20,9 +22,9 @@ public class WebController {
     public String mostrarFormularioOrdenCompra() {
         return "crear_oc"; 
     }
-    
-    @GetMapping("/orden-despacho/crear")
-    public String crearOrdenDespacho() {
-        return "crear_od"; 
+  
+    @GetMapping("/stock/actualizar")
+    public String mostrarFormularioActualizarStock() { 
+        return "actualizarStock";  
     }
 }

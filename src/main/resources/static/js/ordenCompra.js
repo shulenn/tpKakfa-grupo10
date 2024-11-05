@@ -2,47 +2,57 @@
 function agregarItem() {
     const itemsContainer = document.getElementById("itemsContainer");
     const itemDiv = document.createElement("div");
-    
+
+    itemDiv.classList.add("mb-3");
+
     itemDiv.innerHTML = `
-        <label>Producto ID:</label>
-        <input type="number" name="productoId" required>
-        <label>Cantidad:</label>
-        <input type="number" name="cantidad" required>
-        <br><br>
+        <label for="productoCodigo" class="form-label">Producto Código:</label>
+        <input type="number" class="form-control" name="productoCodigo" required>
+        
+        <label for="cantidad" class="form-label">Cantidad:</label>
+        <input type="number" class="form-control" name="cantidad" required>
+        
+        <button type="button" class="btn btn-danger mt-2" onclick="eliminarItem(this)">Eliminar</button>
     `;
-    
+
     itemsContainer.appendChild(itemDiv);
+}
+
+// Eliminar un producto del formulario
+function eliminarItem(button) {
+    const itemDiv = button.parentElement;
+    itemDiv.remove();
 }
 
 // Manejar la creación de la orden de compra
 document.getElementById("ordenCompraForm").addEventListener("submit", async function (event) {
     event.preventDefault();
 
-    const tiendaId = document.getElementById("tiendaId").value;
-    const observaciones = document.getElementById("observaciones").value;
-    const ordenDespacho = document.getElementById("ordenDespacho").value;
-    const fechaRecepcion = document.getElementById("fechaRecepcion").value;
+    const tiendaId = parseInt(document.getElementById("tiendaId").value);
 
     const items = Array.from(document.getElementById("itemsContainer").children).map(itemDiv => {
         return {
-            productoId: itemDiv.querySelector("input[name='productoId']").value,
-            cantidad: itemDiv.querySelector("input[name='cantidad']").value
+            cantidad: parseInt(itemDiv.querySelector("input[name='cantidad']").value),
+            producto: {
+                codigo: parseInt(itemDiv.querySelector("input[name='productoCodigo']").value)
+            }
         };
     });
 
     const ordenCompra = {
-        tiendaId: parseInt(tiendaId),
-        observaciones,
-        ordenDespacho,
-        fechaRecepcion,
-        itemsOrdenCompra: items,
-        pausada: false
+        tiendaId,
+        itemsOrdenCompra: items
     };
 
     try {
+        // Enviar la solicitud POST
         const response = await axios.post("http://localhost:8080/ordenes-compra", ordenCompra);
-        alert("Orden de compra creada con éxito: " + JSON.stringify(response.data));
+        
+        alert("Orden de compra creada con éxito");
+        
+        window.location.href = "/home/tienda";  // Redirige al usuario a la página de inicio de tienda
+  
     } catch (error) {
-        alert("Error al crear la orden de compra: " + error.response.data);
+        alert("Error al crear la orden de compra: " + (error.response ? error.response.data : error.message));
     }
 });
