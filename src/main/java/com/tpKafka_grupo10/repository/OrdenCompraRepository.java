@@ -22,6 +22,9 @@ public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Long> 
 	@Query("SELECT o FROM OrdenCompra o WHERE o.estado = :estado AND o.pausada = :pausada")
 	List<OrdenCompra> findByEstadoAndPausada(@Param("estado") EstadoOrden estado, @Param("pausada") boolean pausada);
 	
+	@Query("SELECT o FROM OrdenCompra o WHERE o.estado = :estado")
+	List<OrdenCompra> findByEstado(@Param("estado") EstadoOrden estado);
+	
 	@Modifying
 	@Query("UPDATE OrdenCompra o SET o.estado = :estado, o.pausada = :pausada WHERE o.codigo = :codigo")
 	void actualizarEstadoYPausada(@Param("codigo") Long codigo, @Param("estado") EstadoOrden estado, @Param("pausada") boolean pausada);
