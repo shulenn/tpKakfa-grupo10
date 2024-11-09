@@ -1,6 +1,7 @@
 package com.tpKafka_grupo10.service;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -45,31 +46,43 @@ public class OrdenCompraService {
 
 	@Transactional
 	public OrdenCompra crearOrdenCompra(OrdenCompra ordenCompra) {
-		validarOrdenCompra(ordenCompra); // Validar los ítems
+	    // Establecer fecha de solicitud
+	    ordenCompra.setFechaSolicitud(LocalDate.now());
 
-		// Establecer fecha de solicitud y estado inicial
-		ordenCompra.setFechaSolicitud(LocalDate.now());
-		ordenCompra.setEstado(EstadoOrden.SOLICITADA);
+	    // Validar los ítems
+	    if (validarOrdenCompra(ordenCompra)) {
+	        // Si la orden es válida, establecer estado y asociar ítems
+	        ordenCompra.setEstado(EstadoOrden.SOLICITADA);
 
-		// Asignar la referencia de OrdenCompra a cada ItemOrdenCompra
-		for (ItemOrdenDeCompra item : ordenCompra.getItemsOrdenCompra()) {
-			item.setOrdenCompra(ordenCompra); // Asignar la referencia
-		}
+	        // Asignar la referencia de OrdenCompra a cada ItemOrdenCompra
+	        for (ItemOrdenDeCompra item : ordenCompra.getItemsOrdenCompra()) {
+	            item.setOrdenCompra(ordenCompra);
+	        }
+	    } else {
+	        // Si la orden es rechazada, establecer estado sin asociar ítems
+	        ordenCompra.setEstado(EstadoOrden.RECHAZADA);
+	        ordenCompra.setObservaciones("Orden de Compra Rechazada");
+	        
+	        // Limpiar los ítems si la orden es rechazada
+	        ordenCompra.setItemsOrdenCompra(Collections.emptyList());
+	    }
 
-		// Guardar en la base de datos
-		OrdenCompra ordenGuardada = ordenCompraRepository.save(ordenCompra);
+	    // Guardar en la base de datos
+	    OrdenCompra ordenGuardada = ordenCompraRepository.save(ordenCompra);
 
-		try {
-			String mensaje = generarMensajeKafka(ordenGuardada);
-			kafkaTemplateString.send("orden-de-compra", mensaje);
+	    // Enviar el mensaje a Kafka sin importar el estado de la orden
+	    try {
+	        String mensaje = generarMensajeKafka(ordenGuardada);
+	        kafkaTemplateString.send("orden-de-compra", mensaje);
+	    } catch (Exception e) {
+	        Logger logger = LoggerFactory.getLogger(this.getClass());
+	        logger.error("Error al enviar mensaje a Kafka", e);
+	        throw new RuntimeException("Error al enviar mensaje a Kafka", e);
+	    }
 
-			return ordenGuardada;
-		} catch (Exception e) {
-			Logger logger = LoggerFactory.getLogger(this.getClass());
-			logger.error("Error al crear la orden de compra", e);
-			throw new RuntimeException("Error al crear la orden de compra", e);
-		}
+	    return ordenGuardada;
 	}
+
 
 	// Método para calcular la cantidad total (puedes ajustar esto según tu lógica)
 	private int calcularCantidadTotal(List<ItemOrdenDeCompra> items) {
@@ -80,16 +93,18 @@ public class OrdenCompraService {
 		return total;
 	}
 
-	private void validarOrdenCompra(OrdenCompra ordenCompra) {
+	private boolean validarOrdenCompra(OrdenCompra ordenCompra) {
+		boolean ordenValida = true;
 		if (ordenCompra.getItemsOrdenCompra() == null || ordenCompra.getItemsOrdenCompra().isEmpty()) {
-			throw new IllegalArgumentException("La orden de compra no puede ser nula y debe tener al menos un ítem.");
+			ordenValida = false;
 		}
 
 		for (ItemOrdenDeCompra item : ordenCompra.getItemsOrdenCompra()) {
-			if (item.getProducto() == null) {
-				throw new IllegalArgumentException("Cada ítem debe tener un producto asociado.");
+			if (item.getCantidad() <= 0) {
+				ordenValida = false;
 			}
 		}
+		return ordenValida;
 	}
 
 	public OrdenCompra modificarOrdenCompra(Long id, OrdenCompra nuevaOrdenCompra) {
