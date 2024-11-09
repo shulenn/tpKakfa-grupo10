@@ -28,6 +28,9 @@ public class OrdenCompraService {
 
 	@Autowired
 	private OrdenCompraRepository ordenCompraRepository;
+	
+	@Autowired
+	private ProveedorService proveedorService;
 
 	@Autowired
 	ProducerService producerService;
@@ -45,30 +48,34 @@ public class OrdenCompraService {
 
 	@Transactional
 	public OrdenCompra crearOrdenCompra(OrdenCompra ordenCompra) {
-		validarOrdenCompra(ordenCompra); // Validar los ítems
+	    validarOrdenCompra(ordenCompra); // Validar los ítems
 
-		// Establecer fecha de solicitud y estado inicial
-		ordenCompra.setFechaSolicitud(LocalDate.now());
-		ordenCompra.setEstado(EstadoOrden.SOLICITADA);
+	    // Establecer fecha de solicitud y estado inicial
+	    ordenCompra.setFechaSolicitud(LocalDate.now());
+	    ordenCompra.setEstado(EstadoOrden.SOLICITADA);
 
-		// Asignar la referencia de OrdenCompra a cada ItemOrdenCompra
-		for (ItemOrdenDeCompra item : ordenCompra.getItemsOrdenCompra()) {
-			item.setOrdenCompra(ordenCompra); // Asignar la referencia
-		}
+	    // Asignar la referencia de OrdenCompra a cada ItemOrdenCompra
+	    for (ItemOrdenDeCompra item : ordenCompra.getItemsOrdenCompra()) {
+	        item.setOrdenCompra(ordenCompra); // Asignar la referencia
+	    }
 
-		// Guardar en la base de datos
-		OrdenCompra ordenGuardada = ordenCompraRepository.save(ordenCompra);
+	    // Guardar en la base de datos
+	    OrdenCompra ordenGuardada = ordenCompraRepository.save(ordenCompra);
 
-		try {
-			String mensaje = generarMensajeKafka(ordenGuardada);
-			kafkaTemplateString.send("orden-de-compra", mensaje);
+	    try {
+	        // Enviar mensaje a Kafka
+	        String mensaje = generarMensajeKafka(ordenGuardada);
+	        kafkaTemplateString.send("orden-de-compra", mensaje);
 
-			return ordenGuardada;
-		} catch (Exception e) {
-			Logger logger = LoggerFactory.getLogger(this.getClass());
-			logger.error("Error al crear la orden de compra", e);
-			throw new RuntimeException("Error al crear la orden de compra", e);
-		}
+	        // Reprocesar automáticamente órdenes de compra en estado SOLICITADA
+	        proveedorService.procesarOrdenCompra(ordenCompra);
+
+	        return ordenGuardada;
+	    } catch (Exception e) {
+	        Logger logger = LoggerFactory.getLogger(this.getClass());
+	        logger.error("Error al crear la orden de compra", e);
+	        throw new RuntimeException("Error al crear la orden de compra", e);
+	    }
 	}
 
 	// Método para calcular la cantidad total (puedes ajustar esto según tu lógica)

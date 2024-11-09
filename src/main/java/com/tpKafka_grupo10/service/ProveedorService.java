@@ -88,7 +88,7 @@ public class ProveedorService implements ProveedorServiceInterface {
 				errores.add("Artículo " + item.getProducto().getCodigo() + ": no existe");
 			}
 			if (item.getCantidad() < 1) {
-				errores.add("Artículo " + item.getProducto().getCodigo() + ": cantidad mal informada");
+				errores.add("Articulo " + item.getProducto().getCodigo() + ": cantidad mal informada");
 			}
 		}
 		return errores;
@@ -121,7 +121,7 @@ public class ProveedorService implements ProveedorServiceInterface {
 		ordenCompraRepository.actualizarEstadoYPausada(ordenCompra.getCodigo(), EstadoOrden.ACEPTADA, true);
 
 		// Preparar el mensaje de observación
-		String observacion = "Código de Artículos faltantes: " + faltantes.stream()
+		String observacion = "Codigo de Articulos faltantes: " + faltantes.stream()
 				.map(item -> String.valueOf(item.getProducto().getCodigo())).collect(Collectors.joining(", "));
 
 		// Enviar el mensaje a Kafka
