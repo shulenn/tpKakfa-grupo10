@@ -27,4 +27,10 @@ public class WebController {
     public String mostrarFormularioActualizarStock() { 
         return "actualizarStock";  
     }
+    
+    @GetMapping("/producto/crear")
+    public String crearProducto() { 
+        return "crearProducto";  
+    }
+    
 }
