@@ -1,0 +1,13 @@
+package com.tpKafka_grupo10.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class WebController {
+    
+    @GetMapping("/orden-compra/crear")
+    public String crearOrdenCompra() {
+        return "crear:oc.html"; 
+    }
+}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+    <title>Stockearte</title>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-md navbar-dark sticky-top" style="background-color: #353A40;">
+            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+                <span class="fs-4 ms-3">Stockearte</span>
+            </a>
+            <div id="navbarSupportedContent">
+                <ul class="nav">
+                    <form action="{{ url_for('logout') }}" method="post">
+                        <button class="btn nav-link link-secondary text-white-50" type="submit">Cerrar sesión</button>
+                    </form>
+                </ul>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <h1>Lista de Productos</h1>
+        
+       
+
+        <!-- Formulario de Filtro -->
+        <form method="GET" action="{{ url_for('listar_productos') }}" class="mb-4">
+            <div class="row">
+                <div class="col-md-3">
+                    <input type="text" name="codigo" class="form-control" placeholder="Código Producto" value="{{ request.args.get('codigo', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <input type="text" name="nombre" class="form-control" placeholder="Nombre Producto" value="{{ request.args.get('nombre', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <input type="text" name="talle" class="form-control" placeholder="Talle" value="{{ request.args.get('talle', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <input type="text" name="color" class="form-control" placeholder="Color" value="{{ request.args.get('color', '') }}">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-2">Filtrar</button>
+        </form>
+        <a href="{{ url_for('home') }}" class="btn btn-secondary mb-3">Volver al Home</a>
+        <a href="{{ url_for('agregar_producto') }}" class="btn btn-success mb-3">Agregar Producto</a>
+
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Talle</th>
+                    <th>Color</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for producto in productos %}
+                <tr>
+                    <td>{{ producto.codigo }}</td>
+                    <td>{{ producto.nombre }}</td>
+                    <td>{{ producto.talle }}</td>
+                    <td>{{ producto.color }}</td>
+                    <td>
+                        <a href="{{ url_for('detalle_producto', codigo=producto.codigo) }}" class="btn btn-warning">Ver Detalle</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        
+    </div>
+</body>
+</html>

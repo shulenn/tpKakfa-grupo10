@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/styles.css">
+    <title>Crear Orden de Despacho</title>
+</head>
+<body>
+    <h1>Crear Orden de Despacho</h1>
+    <form id="ordenDespachoForm">
+        <label for="idOrdenCompra">ID Orden de Compra:</label>
+        <input type="number" id="idOrdenCompra" name="idOrdenCompra" required>
+        <br>
+        <label for="fechaEstimadaEnvio">Fecha Estimada de Envío:</label>
+        <input type="date" id="fechaEstimadaEnvio" name="fechaEstimadaEnvio" required>
+        <br>
+        <div id="itemsContainer">
+            <h3>Productos:</h3>
+            <!-- Los items se agregarán aquí -->
+        </div>
+        <button type="button" onclick="agregarProducto()">Agregar Producto</button>
+        <br><br>
+        <button type="submit">Crear Orden de Despacho</button>
+    </form>
+
+    <script src="js/ordenDespacho.js"></script>
+</body>
+</html>
