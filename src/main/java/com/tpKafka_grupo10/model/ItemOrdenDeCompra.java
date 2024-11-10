@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "item_orden_compra")
-@JsonIgnoreProperties({"ordenDeCompra"})
+@JsonIgnoreProperties({"ordenCompra"})
 public class ItemOrdenDeCompra {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
