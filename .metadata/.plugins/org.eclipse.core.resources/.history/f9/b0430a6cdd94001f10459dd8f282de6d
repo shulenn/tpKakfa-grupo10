@@ -1,0 +1,43 @@
+// Agregar un nuevo producto al formulario
+function agregarProducto() {
+    const itemsContainer = document.getElementById("itemsContainer");
+    const itemDiv = document.createElement("div");
+
+    itemDiv.innerHTML = `
+        <label>Producto ID:</label>
+        <input type="number" name="productoId" required>
+        <label>Cantidad:</label>
+        <input type="number" name="cantidad" required>
+        <br><br>
+    `;
+
+    itemsContainer.appendChild(itemDiv);
+}
+
+// Manejar la creación de la orden de despacho
+document.getElementById("ordenDespachoForm").addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const idOrdenCompra = document.getElementById("idOrdenCompra").value;
+    const fechaEstimadaEnvio = document.getElementById("fechaEstimadaEnvio").value;
+
+    const productos = Array.from(document.getElementById("itemsContainer").children).map(itemDiv => {
+        return {
+            productoId: itemDiv.querySelector("input[name='productoId']").value,
+            cantidad: itemDiv.querySelector("input[name='cantidad']").value
+        };
+    });
+
+    const ordenDespacho = {
+        idOrdenCompra: parseInt(idOrdenCompra),
+        fechaEstimadaEnvio,
+        productos // Suponiendo que tu modelo espera un campo "productos"
+    };
+
+    try {
+        const response = await axios.post("http://localhost:8080/ordenes-despacho", ordenDespacho);
+        alert("Orden de despacho creada con éxito: " + JSON.stringify(response.data));
+    } catch (error) {
+        alert("Error al crear la orden de despacho: " + error.response.data);
+    }
+});

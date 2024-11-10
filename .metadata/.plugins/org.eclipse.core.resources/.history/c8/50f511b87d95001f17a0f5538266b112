@@ -1,0 +1,25 @@
+async function actualizarStock() {
+    const productoId = document.getElementById("productoId").value;
+    const nuevaCantidad = document.getElementById("nuevaCantidad").value;
+
+    const url = `http://localhost::8080/stock/actualizar/${productoId}?nuevaCantidad=${nuevaCantidad}`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            alert("Stock actualizado con éxito.");
+        } else {
+            const errorText = await response.text();
+            alert(`Error al actualizar stock: ${errorText}`);
+        }
+    } catch (error) {
+        console.error("Error en la solicitud:", error);
+        alert("Hubo un problema al actualizar el stock.");
+    }
+}

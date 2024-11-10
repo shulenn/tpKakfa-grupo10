@@ -1,0 +1,20 @@
+package com.tpKafka_grupo10.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+@Controller
+public class WebController {
+    
+    @GetMapping("/orden-compra/crear")
+    public String mostrarFormularioOrdenCompra() {
+        return "crear_oc"; 
+    }
+    
+    @GetMapping("/test-crear")
+    public String testCrear() {
+        return "crear_oc"; // Asegúrate de que esta plantilla existe
+    }
+
+}
