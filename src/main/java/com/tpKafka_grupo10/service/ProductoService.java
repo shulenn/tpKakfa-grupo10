@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,6 +29,12 @@ public class ProductoService {
         // Enviar evento de novedad a Kafka
         ProductoNovedadEvent novedadEvent = new ProductoNovedadEvent();
         novedadEvent.setCodigoProducto(producto.getCodigo());
+        novedadEvent.setNombre(producto.getNombre());
+        // Crear el Map<String, List<String>> con los valores de talle y color
+        Map<String, List<String>> tallesYColores = new HashMap<>();
+        tallesYColores.put(producto.getTalle(), Arrays.asList(producto.getColor()));
+        // Configurar el evento con el Map
+        novedadEvent.setTallesYColores(tallesYColores);
         kafkaTemplateNovedad.send("novedades", novedadEvent);
     }
 

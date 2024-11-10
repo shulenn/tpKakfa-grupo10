@@ -1,9 +1,12 @@
 package com.tpKafka_grupo10.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "item_orden_compra")
+@JsonIgnoreProperties({"ordenCompra"})
 public class ItemOrdenDeCompra {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

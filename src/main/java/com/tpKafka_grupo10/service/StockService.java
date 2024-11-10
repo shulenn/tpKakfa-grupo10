@@ -88,13 +88,14 @@ public class StockService {
         // Actualizar la cantidad de stock para el producto especificado
         Stock stock = stockRepository.findByProductoCodigo(productoId);
         if (stock != null) {
-            stock.setCantidad(nuevaCantidad);
+        	int stockRestante = stock.getCantidad();
+            stock.setCantidad(stockRestante + nuevaCantidad);
             stockRepository.save(stock);
 
             // Enviar el evento de actualización de stock a Kafka
             StockUpdateEvent event = new StockUpdateEvent();
             event.setProductoId(productoId);
-            event.setNuevaCantidad(nuevaCantidad);
+            event.setNuevaCantidad(nuevaCantidad + stockRestante);
             kafkaTemplateEvent.send("stock-actualizado", event);
 
             // Reprocesar órdenes pausadas que contengan este producto

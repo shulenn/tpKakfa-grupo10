@@ -10,6 +10,11 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.support.mapping.DefaultJackson2JavaTypeMapper;
+
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.tpKafka_grupo10.event.StockUpdateEvent;
+
 import org.apache.kafka.common.serialization.StringDeserializer;
 
 
@@ -34,6 +39,12 @@ public class KafkaConsumerConfig {
         factory.setConsumerFactory(consumerFactory());
         return factory;
     }
+    
+ 
+
+
+
 	
 
 }
+	
